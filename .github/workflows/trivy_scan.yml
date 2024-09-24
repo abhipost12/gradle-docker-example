@@ -1,0 +1,57 @@
+name: Build and Scan Docker Image
+
+on:
+  # Trigger the workflow on pull requests (including Dependabot PRs)
+  pull_request:
+    branches:
+      - main
+  # Optionally trigger on a schedule (e.g., daily)
+  schedule:
+    - cron: '0 0 * * *'
+  # Manual trigger
+  workflow_dispatch:  # Allows the workflow to be triggered manually
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      # Step 2: Set up JDK (Java Development Kit)
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '17' # Specify the Java version compatible with your project
+          distribution: 'temurin'
+
+      # Step 2: Set up Docker Buildx (for building Docker images)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 3: Build Docker image using Gradle
+      - name: Build Docker Image with Gradle
+        run: |
+          chmod +x ./gradlew  
+          ./gradlew assemble
+          ./gradlew dockerBuildImage
+
+      # Step 4: Install Trivy for vulnerability scanning
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget
+          wget https://github.com/aquasecurity/trivy/releases/download/v0.33.0/trivy_0.33.0_Linux-64bit.deb
+          sudo dpkg -i trivy_0.33.0_Linux-64bit.deb
+
+      # Step 5: Scan Docker image with Trivy
+      - name: Scan Docker image for vulnerabilities
+        run: trivy image --exit-code 1 --severity HIGH,CRITICAL your-app:latest
+
+      # Optional Step 6: Upload scan report (if needed)
+      - name: Upload Trivy report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.txt
