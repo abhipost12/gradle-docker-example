@@ -31,7 +31,7 @@ RUN gradle --no-daemon build
 #
 # Java image for the application to run in.
 #
-FROM openjdk:18-alpine
+FROM openjdk:24-ea-15-oraclelinux8
 
 #
 # Copy the jar file in and name it app.jar.
